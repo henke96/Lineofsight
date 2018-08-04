@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<title>Line of sight tool</title>
+<script src="js/lineofsight.js"></script>
+
+<body onload="start()">
+<center>
+<button onclick="increaseSize()">Increase size</button>
+<button onclick="decreaseSize()">Decrease size</button><br>
+<br>
+<label><input type="radio" name="map" onclick="setWave1To9()" checked>Wave 1-9</label>
+<label><input type="radio" name="map" onclick="setWave10()">Wave 10</label>
+<label><input type="radio" name="map" onclick="setInferno()">Inferno</label><br>
+<br>
+<label><input type="radio" name="lostype" onclick="setLOSCheckType(0)">Check LOS for Runner</label><br>
+<label><input type="radio" name="lostype" onclick="setLOSCheckType(1)" checked>Check LOS for Player</label>
+ with range <input type="number" id="playerrange" min="0" max="64" value="10" onchange="onPlayerRangeChanged()"><br>
+<label><input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC</label>
+ with size <input type="number" id="npcsize" min="1" max="64" value="1" onchange="onNpcSizeChanged()"><br>
+<canvas id="loscanvas"></canvas>
+</center>
+</body>
