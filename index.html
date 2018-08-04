@@ -12,10 +12,10 @@
 <label><input type="radio" name="map" onclick="setInferno()">Inferno</label><br>
 <br>
 <label><input type="radio" name="lostype" onclick="setLOSCheckType(0)">Check LOS for Runner</label><br>
-<label><input type="radio" name="lostype" onclick="setLOSCheckType(1)" checked>Check LOS for Player</label>
- with range <input type="number" id="playerrange" min="0" max="64" value="10" onchange="onPlayerRangeChanged()"><br>
-<label><input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC</label>
- with size <input type="number" id="npcsize" min="1" max="64" value="1" onchange="onNpcSizeChanged()"><br>
+<label><input type="radio" name="lostype" onclick="setLOSCheckType(1)" checked>Check LOS for Player with range </label>
+<input type="number" id="playerrange" min="0" max="64" value="10" onchange="onPlayerRangeChanged()"><br>
+<label><input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC with size </label>
+<input type="number" id="npcsize" min="1" max="64" value="1" onchange="onNpcSizeChanged()"><br>
 <canvas id="loscanvas"></canvas>
 </center>
 </body>
