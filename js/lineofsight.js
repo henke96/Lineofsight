@@ -26,12 +26,6 @@ const CHECK_LOS_RUNNER = 0;
 const CHECK_LOS_PLAYER = 1;
 const CHECK_LOS_NPC_TO_PLAYER = 2;
 
-var canvas;
-var canvasWidth;
-var canvasHeight;
-var context;
-var tileSize;
-
 var currentMap;
 var losCheckType;
 var selectedTileX;
@@ -40,31 +34,22 @@ var selectedTileY;
 var prevSelectedTileX;
 var prevSelectedTileY;
 
-var imageData;
-var pixels;
-var drawColorR;
-var drawColorG;
-var drawColorB;
-var drawColorA;
-
 function start() {
-    canvas = document.getElementById(HTML_LOSCANVAS_ID)
+    let canvas = document.getElementById(HTML_LOSCANVAS_ID)
     canvas.onmousedown = onMouseDown;
-    context = canvas.getContext("2d");
     
     currentMap = wave1to9;
     losCheckType = CHECK_LOS_PLAYER;
     selectedTileX = -1;
     prevSelectedTileX = -1;
-    
-    setTileSize(12);
+	
+	rrInit(canvas, 12, 64, 64);
+	drawAll();
 }
-
 function setWave1To9() {
     currentMap = wave1to9;
     drawAll();
 }
-
 function setWave10() {
     currentMap = wave10;
     drawAll();
@@ -74,13 +59,11 @@ function setInferno() {
     currentMap = inferno;
     drawAll();
 }
-
 function onNpcSizeChanged() {
     if (losCheckType === CHECK_LOS_NPC_TO_PLAYER) {
         drawAll();
     }
 }
-
 function setLOSCheckType(type) {
     if (losCheckType === type) {
         selectedTileX = -1;
@@ -89,178 +72,47 @@ function setLOSCheckType(type) {
     }
     drawAll();
 }
-
 function increaseSize() {
-    setTileSize(tileSize + 1);
+    setTileSize(rrTileSize + 1);
 }
-
 function decreaseSize() {
-    if (tileSize > 1) {
-        setTileSize(tileSize - 1);
+    if (rrTileSize > 1) {
+        setTileSize(rrTileSize - 1);
     }
 }
-
 function setTileSize(size) {
-    tileSize = size;
-	canvasWidth = tileSize * 64;
-	canvasHeight = tileSize * 64;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    imageData = context.createImageData(canvasWidth, canvasHeight);
-    pixels = imageData.data;
+	rrSetTileSize(size);
     drawAll();
 }
-
 function onPlayerRangeChanged() {
     if (losCheckType === CHECK_LOS_PLAYER) {
         drawAll();
     }
 }
-
 function onMouseDown(e) {
-    var canvasRect = canvas.getBoundingClientRect();
+    var canvasRect = rCanvas.getBoundingClientRect();
     prevSelectedTileX = selectedTileX;
     prevSelectedTileY = selectedTileY;
-    selectedTileX = Math.trunc((e.clientX - canvasRect.left) / tileSize);
-    selectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / tileSize);
+    selectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
+    selectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
     drawAll();
 }
-
 function getTileFlag(x, y) {
     return currentMap[x + y * 64];
 }
-
-function setAllPixels() {
-	var lastI = canvasWidth*canvasHeight*4;
-    for (var i = 0; i < lastI; i += 4) {
-        pixels[i] = drawColorR;
-        pixels[i + 1] = drawColorG;
-        pixels[i + 2] = drawColorB;
-        pixels[i + 3] = 255;
-    }
-}
-
-function setPixel(x, y) {
-    var i = ((canvasHeight - 1 - y) * canvasWidth + x) * 4;
-    
-    var r = pixels[i] + drawColorA * (drawColorR - pixels[i]) / 255;
-    var g = pixels[i + 1] + drawColorA * (drawColorG - pixels[i + 1]) / 255;
-    var b = pixels[i + 2] + drawColorA * (drawColorB - pixels[i + 2]) / 255;
-    pixels[i] = r;
-    pixels[i + 1] = g;
-    pixels[i + 2] = b;
-    pixels[i + 3] = 255;
-}
-
-function setDrawColor(r, g, b, a) {
-    drawColorR = r;
-    drawColorG = g;
-    drawColorB = b;
-    drawColorA = a;
-}
-
-function fillTile(tileX, tileY) {
-    for (var x = tileX * tileSize; x < (tileX + 1) * tileSize; ++x) {
-        for (var y = tileY * tileSize; y < (tileY + 1) * tileSize; ++y) {
-            setPixel(x, y);
-        }
-    }
-}
-
-function fillTileItem(tileX, tileY) {
-    var padding = tileSize >>> 2;
-    for (var x = tileX * tileSize + padding; x < (tileX + 1) * tileSize - padding; ++x) {
-        for (var y = tileY * tileSize + padding; y < (tileY + 1) * tileSize - padding; ++y) {
-            setPixel(x, y);
-        }
-    }
-}
-
-function outlineTile(tileX, tileY) {
-    var x = tileX * tileSize;
-    for (var y = tileY * tileSize; y < (tileY + 1) * tileSize; ++y) {
-        setPixel(x, y);
-    }
-    var y = tileY * tileSize;
-    for (var x = tileX * tileSize + 1; x < (tileX + 1) * tileSize; ++x) {
-        setPixel(x, y);
-    }
-    x = (tileX + 1) * tileSize - 1;
-    for (var y = tileY * tileSize + 1; y < (tileY + 1) * tileSize; ++y) {
-        setPixel(x, y);
-    }
-    y = (tileY + 1) * tileSize - 1;
-    for (var x = tileX * tileSize + 1; x < (tileX + 1) * tileSize - 1; ++x) {
-        setPixel(x, y);
-    }
-}
-
-function outlineBig(tileX, tileY, size) {
-    for (var x = tileX; x < tileX + size; ++x) {
-        southLine(x, tileY);
-        northLine(x, tileY + size - 1);
-    }
-    for (var y = tileY; y < tileY + size; ++y) {
-        westLine(tileX, y);
-        eastLine(tileX + size - 1, y);
-    }
-}
-
-function westLine(tileX, tileY) {
-    var x = tileX * tileSize;
-    for (var y = tileY * tileSize; y < (tileY + 1) * tileSize; ++y) {
-        setPixel(x, y);
-    }
-}
-
-function eastLine(tileX, tileY) {
-    var x = (tileX + 1) * tileSize - 1;
-    for (var y = tileY * tileSize; y < (tileY + 1) * tileSize; ++y) {
-        setPixel(x, y);
-    }
-}
-
-function southLine(tileX, tileY) {
-    var y = tileY * tileSize;
-    for (var x = tileX * tileSize; x < (tileX + 1) * tileSize; ++x) {
-        setPixel(x, y);
-    }
-}
-
-function northLine(tileX, tileY) {
-    var y = (tileY + 1) * tileSize - 1;
-    for (var x = tileX * tileSize; x < (tileX + 1) * tileSize; ++x) {
-        setPixel(x, y);
-    }
-}
-
-function spike(tileX, tileY) {
-    var x = tileX * tileSize;
-    var y = tileY * tileSize;
-    var endX = x + tileSize - 1;
-    endI = (tileSize >>> 1) + (tileSize & 1);
-    
-    for (var i = 0; i < endI; ++i) {
-        setPixel(x + i, y);
-        setPixel(endX - i, y);
-        ++y;
-    }
-}
-
 function drawAll() {
     drawMap();
     drawDetails();
     drawLOS();
     drawGrid();
     drawOverlays();
-    context.putImageData(imageData, 0, 0);
+    rPresent();
 }
-
 function drawLOS() {
     if (selectedTileX === -1) {
         return;
     }
-    setDrawColor(0, 240, 0, 92);
+    rSetDrawColor(0, 240, 0, 92);
 	if (losCheckType === CHECK_LOS_NPC_TO_PLAYER) {
         var npcSize = Number(document.getElementById(HTML_NPCSIZE_ID).value);
         if (npcSize < 1) {
@@ -288,7 +140,7 @@ function drawLOS() {
                     destY = y;
                 }
                 if (hasLineOfSight(x, y, destX, destY) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    fillTile(x, y);
+                    rrFill(x, y);
                 }
             }
         }
@@ -298,7 +150,7 @@ function drawLOS() {
         for (var x = Math.max(selectedTileX - 8 - xOffset, 0); x <= Math.min(selectedTileX + 15 - xOffset, 63); ++x) {
            for (var y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
                 if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    fillTile(x, y);
+                    rrFill(x, y);
                 }
             }
         }
@@ -307,89 +159,87 @@ function drawLOS() {
         for (var x = Math.max(selectedTileX - range, 0); x <= Math.min(selectedTileX + range, 63); ++x) {
            for (var y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
                 if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    fillTile(x, y);
+                    rrFill(x, y);
                 }
             }
         }
     }
-    setDrawColor(0, 255, 255, 255);
-    fillTile(selectedTileX, selectedTileY);
+    rSetDrawColor(0, 255, 255, 255);
+    rrFill(selectedTileX, selectedTileY);
     if (losCheckType === CHECK_LOS_NPC_TO_PLAYER && npcSize > 1) {
-        outlineBig(selectedTileX, selectedTileY, npcSize);
+        rrOutlineBig(selectedTileX, selectedTileY, npcSize, npcSize);
     }
 }
-
 function drawDetails() {
     if (currentMap !== wave1to9 && currentMap !== wave10) {
         return;
     }
-    setDrawColor(160, 82, 45, 255);
-    spike(40, 40);
-    spike(40, 39);
-    spike(41, 40);
-    spike(41, 39);
-    spike(43, 39);
+    rSetDrawColor(160, 82, 45, 255);
+    rrCone(40, 40);
+    rrCone(40, 39);
+    rrCone(41, 40);
+    rrCone(41, 39);
+    rrCone(43, 39);
     
-    spike(36, 42);
-    spike(36, 43);
-    spike(37, 42);
-    spike(37, 43);
+    rrCone(36, 42);
+    rrCone(36, 43);
+    rrCone(37, 42);
+    rrCone(37, 43);
     
-    spike(39, 44);
+    rrCone(39, 44);
     
-    spike(43, 30);
-    spike(43, 31);
-    spike(44, 30);
-    spike(44, 31);
+    rrCone(43, 30);
+    rrCone(43, 31);
+    rrCone(44, 30);
+    rrCone(44, 31);
     
-    spike(45, 32);
+    rrCone(45, 32);
     
     if (currentMap === wave1to9) {
-        fillTileItem(29, 46);
-        fillTileItem(28, 47);
+        rrFillItem(29, 46);
+        rrFillItem(28, 47);
     } else {
-        fillTileItem(30, 46);
-        fillTileItem(29, 47);
+        rrFillItem(30, 46);
+        rrFillItem(29, 47);
     }
-    setDrawColor(127, 127, 127, 255);
-    fillTileItem(32, 42);
+    rSetDrawColor(127, 127, 127, 255);
+    rrFillItem(32, 42);
 }
-
 function drawOverlays() {
     if (currentMap === inferno) {
-        setDrawColor(240, 20, 20, 255);
-        outlineBig(18, 18, 2);
-        outlineBig(18, 18, 3);
-        outlineBig(18, 18, 4);
-        outlineBig(22, 23, 2);
-        outlineBig(22, 23, 3);
-        outlineBig(22, 23, 4);
-        outlineBig(32, 18, 2);
-        outlineBig(32, 18, 3);
-        outlineBig(32, 18, 4);
-        outlineBig(40, 21, 2);
-        outlineBig(40, 21, 3);
-        outlineBig(40, 21, 4);
-        outlineBig(33, 29, 2);
-        outlineBig(33, 29, 3);
-        outlineBig(33, 29, 4);
-        outlineBig(40, 34, 2);
-        outlineBig(40, 34, 3);
-        outlineBig(40, 34, 4);
-        outlineBig(39, 41, 2);
-        outlineBig(39, 41, 3);
-        outlineBig(39, 41, 4);
-        outlineBig(18, 41, 2);
-        outlineBig(18, 41, 3);
-        outlineBig(18, 41, 4);
-        outlineBig(20, 35, 2);
-        outlineBig(20, 35, 3);
-        outlineBig(20, 35, 4);
+        rSetDrawColor(240, 20, 20, 255);
+        rrOutlineBig(18, 18, 2, 2);
+        rrOutlineBig(18, 18, 3, 3);
+        rrOutlineBig(18, 18, 4, 4);
+        rrOutlineBig(22, 23, 2, 2);
+        rrOutlineBig(22, 23, 3, 3);
+        rrOutlineBig(22, 23, 4, 4);
+        rrOutlineBig(32, 18, 2, 2);
+        rrOutlineBig(32, 18, 3, 3);
+        rrOutlineBig(32, 18, 4, 4);
+        rrOutlineBig(40, 21, 2, 2);
+        rrOutlineBig(40, 21, 3, 3);
+        rrOutlineBig(40, 21, 4, 4);
+        rrOutlineBig(33, 29, 2, 2);
+        rrOutlineBig(33, 29, 3, 3);
+        rrOutlineBig(33, 29, 4, 4);
+        rrOutlineBig(40, 34, 2, 2);
+        rrOutlineBig(40, 34, 3, 3);
+        rrOutlineBig(40, 34, 4, 4);
+        rrOutlineBig(39, 41, 2, 2);
+        rrOutlineBig(39, 41, 3, 3);
+        rrOutlineBig(39, 41, 4, 4);
+        rrOutlineBig(18, 41, 2, 2);
+        rrOutlineBig(18, 41, 3, 3);
+        rrOutlineBig(18, 41, 4, 4);
+        rrOutlineBig(20, 35, 2, 2);
+        rrOutlineBig(20, 35, 3, 3);
+        rrOutlineBig(20, 35, 4, 4);
         //zuk
-        outlineBig(28, 52, 7);
+        rrOutlineBig(28, 52, 7, 7);
         //nibblers
-        setDrawColor(0, 0, 255, 255);
-        outlineBig(25, 33, 3);
+        rSetDrawColor(0, 0, 255, 255);
+        rrOutlineBig(25, 33, 3, 3);
         return;
     }
     
@@ -398,102 +248,94 @@ function drawOverlays() {
     }
     
     // Spawns and stuff
-    setDrawColor(160, 82, 45, 255);
-    outlineTile(45, 34);
-    outlineTile(15, 33);
+    rSetDrawColor(160, 82, 45, 255);
+    rrOutline(45, 34);
+    rrOutline(15, 33);
 
-    setDrawColor(255, 0, 0, 255);
+    rSetDrawColor(255, 0, 0, 255);
     if (currentMap === wave1to9) {
-        outlineTile(18, 45);
+        rrOutline(18, 45);
     } else {
-        outlineTile(18, 46);
+        rrOutline(18, 46);
     }
-    outlineTile(24, 47);
-    setDrawColor(0, 0, 255, 255);
+    rrOutline(24, 47);
+    rSetDrawColor(0, 0, 255, 255);
     if (currentMap === wave1to9) {
-        outlineTile(36, 47);
+        rrOutline(36, 47);
     } else {
-        outlineTile(42, 46);
+        rrOutline(42, 46);
     }
-    setDrawColor(0, 255, 0, 255);
+    rSetDrawColor(0, 255, 0, 255);
     if (currentMap === wave1to9) {
-        outlineTile(42, 45);
+        rrOutline(42, 45);
     } else {
-        outlineTile(36, 47);
+        rrOutline(36, 47);
     }
 }
-
 function drawGrid() {
-    for (var tileX = 0; tileX < 64; ++tileX) {
-        if (tileX % 8 == 7) {
-            setDrawColor(0, 0, 0, 72);
+    for (var xTile = 0; xTile < 64; ++xTile) {
+        if (xTile % 8 == 7) {
+            rSetDrawColor(0, 0, 0, 72);
         } else {
-            setDrawColor(0, 0, 0, 48);
+            rSetDrawColor(0, 0, 0, 48);
         }
-        var x = (tileX + 1) * tileSize - 1;
-        for (var y = 0; y < tileSize * 64; ++y) {
-            setPixel(x, y);
-        }
+		rrEastLineBig(xTile, 0, 64);
     }
-    for (var tileY = 0; tileY < 64; ++tileY) {
-        if (tileY % 8 == 7) {
-            setDrawColor(0, 0, 0, 72);
+    for (var yTile = 0; yTile < 64; ++yTile) {
+        if (yTile % 8 == 7) {
+            rSetDrawColor(0, 0, 0, 72);
         } else {
-            setDrawColor(0, 0, 0, 48);
+            rSetDrawColor(0, 0, 0, 48);
         }
-        var y = (tileY + 1) * tileSize - 1;
-        for (var x = 0; x < tileSize * 64; ++x) {
-            setPixel(x, y);
-        }
+		rrNorthLineBig(0, yTile, 64);
     }
 }
-
 function drawMap() {
-    setDrawColor(206, 183, 117, 255);
-    setAllPixels();
-    for (var y = 0; y < 64; ++y) {	
-        for (var x = 0; x < 64; ++x) {
-            if ((getTileFlag(x, y) & LOS_FULL_MASK) !== 0) {
-                setDrawColor(0, 0, 0, 255);
-                fillTile(x, y);
+    rSetDrawColor(206, 183, 117, 255);
+    rClear();
+    for (let y = 0; y < 64; ++y) {	
+        for (let x = 0; x < 64; ++x) {
+			let tileFlag = getTileFlag(x, y);
+            if ((tileFlag & LOS_FULL_MASK) !== 0) {
+                rSetDrawColor(0, 0, 0, 255);
+                rrFill(x, y);
             } else  {
-                if ((getTileFlag(x, y) & MOVE_FULL_MASK) !== 0) {
-                    setDrawColor(127, 127, 127, 255);
-                    fillTile(x, y);
+                if ((tileFlag & MOVE_FULL_MASK) !== 0) {
+                    rSetDrawColor(127, 127, 127, 255);
+                    rrFill(x, y);
                 }
-                if ((getTileFlag(x, y) & LOS_EAST_MASK) !== 0) {
-                    setDrawColor(0, 0, 0, 255);
-                    eastLine(x, y);
-                } else if ((getTileFlag(x, y) & MOVE_EAST_MASK) !== 0) {
-                    setDrawColor(127, 127, 127, 255);
-                    eastLine(x, y);
+                if ((tileFlag & LOS_EAST_MASK) !== 0) {
+                    rSetDrawColor(0, 0, 0, 255);
+                    rrEastLine(x, y);
+                } else if ((tileFlag & MOVE_EAST_MASK) !== 0) {
+                    rSetDrawColor(127, 127, 127, 255);
+                    rrEastLine(x, y);
                 }
-                if ((getTileFlag(x, y) & LOS_WEST_MASK) !== 0) {
-                    setDrawColor(0, 0, 0, 255);
-                    westLine(x, y);
-                } else if ((getTileFlag(x, y) & MOVE_WEST_MASK) !== 0) {
-                    setDrawColor(127, 127, 127, 255);
-                    westLine(x, y);
+                if ((tileFlag & LOS_WEST_MASK) !== 0) {
+                    rSetDrawColor(0, 0, 0, 255);
+                    rrWestLine(x, y);
+                } else if ((tileFlag & MOVE_WEST_MASK) !== 0) {
+                    rSetDrawColor(127, 127, 127, 255);
+                    rrWestLine(x, y);
                 }
-                if ((getTileFlag(x, y) & LOS_NORTH_MASK) !== 0) {
-                    setDrawColor(0, 0, 0, 255);
-                    northLine(x, y);
-                } else if ((getTileFlag(x, y) & MOVE_NORTH_MASK) !== 0) {
-                    setDrawColor(127, 127, 127, 255);
-                    northLine(x, y);
+                if ((tileFlag & LOS_NORTH_MASK) !== 0) {
+                    rSetDrawColor(0, 0, 0, 255);
+                    rrNorthLine(x, y);
+                } else if ((tileFlag & MOVE_NORTH_MASK) !== 0) {
+                    rSetDrawColor(127, 127, 127, 255);
+                    rrNorthLine(x, y);
                 }
-                if ((getTileFlag(x, y) & LOS_SOUTH_MASK) !== 0) {
-                    setDrawColor(0, 0, 0, 255);
-                    southLine(x, y);
-                } else if ((getTileFlag(x, y) & MOVE_SOUTH_MASK) !== 0) {
-                    setDrawColor(127, 127, 127, 255);
-                    southLine(x, y);
+                if ((tileFlag & LOS_SOUTH_MASK) !== 0) {
+                    rSetDrawColor(0, 0, 0, 255);
+                    rrSouthLine(x, y);
+                } else if ((tileFlag & MOVE_SOUTH_MASK) !== 0) {
+                    rSetDrawColor(127, 127, 127, 255);
+                    rrSouthLine(x, y);
                 }
             }
         }
     }
 }
-
 function hasLineOfSight(x1, y1, x2, y2) {
     var dx = x2 - x1;
     var dxAbs = Math.abs(dx);
@@ -574,18 +416,157 @@ function hasLineOfSight(x1, y1, x2, y2) {
     }
     return true;
 }
+//{ RsRenderer - rr
+function rrInit(canvas, tileSize, widthTiles, heightTiles) {
+	rInit(canvas, tileSize*widthTiles, tileSize*heightTiles);
+	rrTileSize = tileSize;
+	rrWidthTiles = widthTiles;
+	rrHeightTiles = heightTiles;
+}
+function rrSetTileSize(size) {
+	rrTileSize = size;
+	rResizeCanvas(size*rrWidthTiles, size*rrHeightTiles);
+}
+function rrSetSize(widthTiles, heightTiles) {
+	rrWidthTiles = widthTiles;
+	rrHeightTiles = heightTiles;
+	rResizeCanvas(rrTileSize*rrWidthTiles, rrTileSize*rrHeightTiles);
+}
+function rrFill(x, y) {
+	rDrawFilledRect(x*rrTileSize, y*rrTileSize, rrTileSize, rrTileSize);
+}
+function rrOutline(x, y) {
+	rDrawOutlinedRect(x*rrTileSize, y*rrTileSize, rrTileSize, rrTileSize);
+}
+function rrOutlineBig(x, y, width, height) {
+	rDrawOutlinedRect(x*rrTileSize, y*rrTileSize, rrTileSize*width, rrTileSize*height);
+}
+function rrWestLine(x, y) {
+	rDrawVerticalLine(x*rrTileSize, y*rrTileSize, rrTileSize);
+}
+function rrWestLineBig(x, y, length) {
+	rDrawHorizontalLine(x*rrTileSize, y*rrTileSize, rrTileSize*length)
+}
+function rrEastLine(x, y) {
+	rDrawVerticalLine((x + 1)*rrTileSize - 1, y*rrTileSize, rrTileSize);
+}
+function rrEastLineBig(x, y, length) {
+	rDrawVerticalLine((x + 1)*rrTileSize - 1, y*rrTileSize, rrTileSize*length);
+}
+function rrSouthLine(x, y) {
+	rDrawHorizontalLine(x*rrTileSize, y*rrTileSize, rrTileSize);
+}
+function rrSouthLineBig(x, y, length) {
+	rDrawHorizontalLine(x*rrTileSize, y*rrTileSize, rrTileSize*length);
+}
+function rrNorthLine(x, y) {
+	rDrawHorizontalLine(x*rrTileSize, (y + 1)*rrTileSize - 1, rrTileSize);
+}
+function rrNorthLineBig(x, y, length) {
+	rDrawHorizontalLine(x*rrTileSize, (y + 1)*rrTileSize - 1, rrTileSize*length);
+}
+function rrCone(x, y) {
+	rDrawCone(x*rrTileSize, y*rrTileSize, rrTileSize);
+}
+function rrFillItem(x, y) {
+	let padding = rrTileSize >>> 2;
+	let size = rrTileSize - 2*padding;
+	rDrawFilledRect(x*rrTileSize + padding, y*rrTileSize + padding, size, size);
+}
+var rrTileSize;
+var rrWidthTiles;
+var rrHeightTiles;
+//}
+//{ Renderer - r
+const rPIXEL_ALPHA = 255 << 24;
+function rInit(canvas, width, height) {
+	rCanvas = canvas;
+	rContext = canvas.getContext("2d");
+	rResizeCanvas(width, height);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	rSetDrawColor(255, 255, 255, 255);
+}
+function rResizeCanvas(width, height) {
+	rCanvas.width = width;
+	rCanvas.height = height;
+	rCanvasWidth = width;
+	rCanvasHeight = height;
+	rImageData = rContext.createImageData(width, height);
+	rPixels = new ArrayBuffer(rImageData.data.length);
+	rPixels8 = new Uint8ClampedArray(rPixels);
+	rPixels32 = new Uint32Array(rPixels);
+}
+function rSetDrawColor(r, g, b, a) {
+	rDrawColorR = r;
+	rDrawColorG = g << 8;
+	rDrawColorB = b << 16;
+	rDrawColorA = a + 1;
+}
+function rClear() {
+	let color = rPIXEL_ALPHA | rDrawColorR | rDrawColorG | rDrawColorB;
+	let endI = rPixels32.length;
+	for (let i = 0; i < endI; ++i) {
+		rPixels32[i] = color;
+	}
+}
+function rPresent() {
+	rImageData.data.set(rPixels8);
+	rContext.putImageData(rImageData, 0, 0);
+}
+function rDrawPixel(x, y) {
+	let i = x + (rCanvasHeight - 1 - y)*rCanvasWidth;
+	let color = rPixels32[i];
+	let deltaR = rDrawColorA*(rDrawColorR - (color & 0xFF));
+	let deltaG = rDrawColorA*(rDrawColorG - (color & 0xFF00)) & 0xFFFF0000;
+	let deltaB = rDrawColorA*(rDrawColorB - (color & 0xFF0000)) & 0xFF000000;
+	rPixels32[i] += (deltaR + deltaG + deltaB >> 8);
+}
+function rDrawHorizontalLine(x, y, length) {
+	let endX = x + length;
+	for (; x < endX; ++x) {
+		rDrawPixel(x, y);
+	}
+}
+function rDrawVerticalLine(x, y, length) {
+	let endY = y + length;
+	for (; y < endY; ++y) {
+		rDrawPixel(x, y);
+	}
+}
+function rDrawFilledRect(x, y, width, height) {
+	let endX = x + width;
+	let endY = y + height;
+	for (let curX = x; curX < endX; ++curX) {
+		for (let curY = y; curY < endY; ++curY) {
+			rDrawPixel(curX, curY);
+		}
+	}
+}
+function rDrawOutlinedRect(x, y, width, height) {
+	rDrawHorizontalLine(x, y, width);
+	rDrawHorizontalLine(x, y + height - 1, width);
+	rDrawVerticalLine(x, y + 1, height - 2);
+	rDrawVerticalLine(x + width - 1, y + 1, height - 2);
+}
+function rDrawCone(x, y, width) {
+	let lastX = x + width - 1;
+	let endI = (width >>> 1) + (width & 1);
+	for (let i = 0; i < endI; ++i) {
+		rDrawPixel(x + i, y);
+		rDrawPixel(lastX - i, y);
+		++y;
+	}
+}
+var rCanvas;
+var rCanvasWidth;
+var rCanvasHeight;
+var rContext;
+var rImageData;
+var rPixels;
+var rPixels8;
+var rPixels32;
+var rDrawColorR;
+var rDrawColorG;
+var rDrawColorB;
+var rDrawColorA;
+//}
