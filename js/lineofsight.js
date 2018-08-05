@@ -27,6 +27,8 @@ const CHECK_LOS_PLAYER = 1;
 const CHECK_LOS_NPC_TO_PLAYER = 2;
 
 var canvas;
+var canvasWidth;
+var canvasHeight;
 var context;
 var tileSize;
 
@@ -100,9 +102,11 @@ function decreaseSize() {
 
 function setTileSize(size) {
     tileSize = size;
-    canvas.width = tileSize * 64;
-    canvas.height = tileSize * 64;
-    imageData = context.createImageData(canvas.width, canvas.height);
+	canvasWidth = tileSize * 64;
+	canvasHeight = tileSize * 64;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    imageData = context.createImageData(canvasWidth, canvasHeight);
     pixels = imageData.data;
     drawAll();
 }
@@ -127,7 +131,8 @@ function getTileFlag(x, y) {
 }
 
 function setAllPixels() {
-    for (var i = 0; i < canvas.width*canvas.height*4; i += 4) {
+	var lastI = canvasWidth*canvasHeight*4;
+    for (var i = 0; i < lastI; i += 4) {
         pixels[i] = drawColorR;
         pixels[i + 1] = drawColorG;
         pixels[i + 2] = drawColorB;
@@ -136,7 +141,7 @@ function setAllPixels() {
 }
 
 function setPixel(x, y) {
-    var i = ((canvas.height - 1 - y) * canvas.width + x) * 4;
+    var i = ((canvasHeight - 1 - y) * canvasWidth + x) * 4;
     
     var r = pixels[i] + drawColorA * (drawColorR - pixels[i]) / 255;
     var g = pixels[i + 1] + drawColorA * (drawColorG - pixels[i + 1]) / 255;
