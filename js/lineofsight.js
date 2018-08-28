@@ -41,8 +41,8 @@ function start() {
     losCheckType = CHECK_LOS_PLAYER;
     selectedTileX = -1;
     prevSelectedTileX = -1;
-	
-	rrInit(canvas, 12, 64, 64);
+	rInit(canvas, 64*12, 64*12);
+	rrInit(12);
 	drawAll();
 }
 function setWave1To9() {
@@ -80,6 +80,7 @@ function decreaseSize() {
     }
 }
 function setTileSize(size) {
+	rResizeCanvas(size*64, size*64);
 	rrSetTileSize(size);
     drawAll();
 }
@@ -201,6 +202,12 @@ function drawDetails() {
         rrFillItem(30, 46);
         rrFillItem(29, 47);
     }
+	rSetDrawColor(160, 82, 45, 220);
+	rrOutline(45, 34);
+	rrOutline(15, 33);
+	if (currentMap === wave10) {
+		rrOutlineBig(27, 28, 8, 8);
+	}
     rSetDrawColor(127, 127, 127, 255);
     rrFillItem(32, 42);
 }
@@ -240,36 +247,35 @@ function drawOverlays() {
         rSetDrawColor(0, 0, 255, 255);
         rrOutlineBig(25, 33, 3, 3);
         return;
-    }
-    
+    } 
     if (currentMap !== wave1to9 && currentMap !== wave10) {
         return;
     }
-    
     // Spawns and stuff
-    rSetDrawColor(160, 82, 45, 255);
-    rrOutline(45, 34);
-    rrOutline(15, 33);
-
-    rSetDrawColor(255, 0, 0, 255);
-    if (currentMap === wave1to9) {
-        rrOutline(18, 45);
-    } else {
-        rrOutline(18, 46);
-    }
-    rrOutline(24, 47);
-    rSetDrawColor(0, 0, 255, 255);
-    if (currentMap === wave1to9) {
-        rrOutline(36, 47);
-    } else {
-        rrOutline(42, 46);
-    }
-    rSetDrawColor(0, 255, 0, 255);
-    if (currentMap === wave1to9) {
-        rrOutline(42, 45);
-    } else {
-        rrOutline(36, 47);
-    }
+	rSetDrawColor(240, 10, 10, 220);
+	if (currentMap === wave1to9) {
+		rrOutline(18, 45);
+	} else {
+		rrOutline(18, 46);
+	}
+	rrOutline(24, 47);
+	rrFill(33, 14);
+	rSetDrawColor(10, 10, 240, 220);
+	if (currentMap === wave1to9) {
+		rrOutline(36, 47);
+	} else {
+		rrOutline(42, 46);
+	}
+	rrFill(34, 14);
+	rSetDrawColor(10, 240, 10, 220);
+	if (currentMap === wave1to9) {
+		rrOutline(42, 45);
+	} else {
+		rrOutline(36, 47);
+	}
+	rrFill(35, 14);
+	rSetDrawColor(240, 240, 10, 220);
+	rrFill(36, 14);
 }
 function drawGrid() {
     for (var xTile = 0; xTile < 64; ++xTile) {
@@ -416,15 +422,11 @@ function hasLineOfSight(x1, y1, x2, y2) {
     return true;
 }
 //{ RsRenderer - rr
-function rrInit(canvas, tileSize, widthTiles, heightTiles) {
-	rInit(canvas, tileSize*widthTiles, tileSize*heightTiles);
+function rrInit(tileSize) {
 	rrTileSize = tileSize;
-	rrWidthTiles = widthTiles;
-	rrHeightTiles = heightTiles;
 }
 function rrSetTileSize(size) {
 	rrTileSize = size;
-	rResizeCanvas(size*rrWidthTiles, size*rrHeightTiles);
 }
 function rrSetSize(widthTiles, heightTiles) {
 	rrWidthTiles = widthTiles;
@@ -436,6 +438,9 @@ function rrFillOpaque(x, y) {
 }
 function rrFill(x, y) {
 	rDrawFilledRect(x*rrTileSize, y*rrTileSize, rrTileSize, rrTileSize);
+}
+function rrFillBig(x, y, width, height) {
+	rDrawFilledRect(x*rrTileSize, y*rrTileSize, width*rrTileSize, height*rrTileSize);
 }
 function rrOutline(x, y) {
 	rDrawOutlinedRect(x*rrTileSize, y*rrTileSize, rrTileSize, rrTileSize);
@@ -476,8 +481,6 @@ function rrFillItem(x, y) {
 	rDrawFilledRect(x*rrTileSize + padding, y*rrTileSize + padding, size, size);
 }
 var rrTileSize;
-var rrWidthTiles;
-var rrHeightTiles;
 //}
 //{ Renderer - r
 const rPIXEL_ALPHA = 255 << 24;
@@ -485,7 +488,6 @@ function rInit(canvas, width, height) {
 	rCanvas = canvas;
 	rContext = canvas.getContext("2d");
 	rResizeCanvas(width, height);
-
 	rSetDrawColor(255, 255, 255, 255);
 }
 function rResizeCanvas(width, height) {
