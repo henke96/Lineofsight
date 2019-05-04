@@ -34,224 +34,224 @@ var prevSelectedTileX;
 var prevSelectedTileY;
 
 function start() {
-    let canvas = document.getElementById(HTML_LOSCANVAS_ID)
-    canvas.onmousedown = onMouseDown;
-    
-    currentMap = wave1to9;
-    losCheckType = CHECK_LOS_PLAYER;
-    selectedTileX = -1;
-    prevSelectedTileX = -1;
+	let canvas = document.getElementById(HTML_LOSCANVAS_ID)
+	canvas.onmousedown = onMouseDown;
+	
+	currentMap = wave1to9;
+	losCheckType = CHECK_LOS_PLAYER;
+	selectedTileX = -1;
+	prevSelectedTileX = -1;
 	rInit(canvas, 64*12, 64*12);
 	rrInit(12);
 	drawAll();
 }
 function setWave1To9() {
-    currentMap = wave1to9;
-    drawAll();
+	currentMap = wave1to9;
+	drawAll();
 }
 function setWave10() {
-    currentMap = wave10;
-    drawAll();
+	currentMap = wave10;
+	drawAll();
 }
 
 function setInferno() {
-    currentMap = inferno;
-    drawAll();
+	currentMap = inferno;
+	drawAll();
 }
 function onNpcSizeChanged() {
-    if (losCheckType === CHECK_LOS_NPC_TO_PLAYER) {
-        drawAll();
-    }
+	if (losCheckType === CHECK_LOS_NPC_TO_PLAYER) {
+		drawAll();
+	}
 }
 function setLOSCheckType(type) {
-    if (losCheckType === type) {
-        selectedTileX = -1;
-    } else {
-        losCheckType = type;
-    }
-    drawAll();
+	if (losCheckType === type) {
+		selectedTileX = -1;
+	} else {
+		losCheckType = type;
+	}
+	drawAll();
 }
 function increaseSize() {
-    setTileSize(rrTileSize + 1);
+	setTileSize(rrTileSize + 1);
 }
 function decreaseSize() {
-    if (rrTileSize > 1) {
-        setTileSize(rrTileSize - 1);
-    }
+	if (rrTileSize > 1) {
+		setTileSize(rrTileSize - 1);
+	}
 }
 function setTileSize(size) {
 	rResizeCanvas(size*64, size*64);
 	rrSetTileSize(size);
-    drawAll();
+	drawAll();
 }
 function onPlayerRangeChanged() {
-    if (losCheckType === CHECK_LOS_PLAYER) {
-        drawAll();
-    }
+	if (losCheckType === CHECK_LOS_PLAYER) {
+		drawAll();
+	}
 }
 function onMouseDown(e) {
-    var canvasRect = rCanvas.getBoundingClientRect();
-    prevSelectedTileX = selectedTileX;
-    prevSelectedTileY = selectedTileY;
-    selectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
-    selectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
-    drawAll();
+	var canvasRect = rCanvas.getBoundingClientRect();
+	prevSelectedTileX = selectedTileX;
+	prevSelectedTileY = selectedTileY;
+	selectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
+	selectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
+	drawAll();
 }
 function getTileFlag(x, y) {
-    return currentMap[x + y * 64];
+	return currentMap[x + y * 64];
 }
 function drawAll() {
-    drawMap();
-    drawDetails();
-    drawLOS();
-    drawGrid();
-    drawOverlays();
-    rPresent();
+	drawMap();
+	drawDetails();
+	drawLOS();
+	drawGrid();
+	drawOverlays();
+	rPresent();
 }
 function drawLOS() {
-    if (selectedTileX === -1) {
-        return;
-    }
-    rSetDrawColor(0, 240, 0, 92);
+	if (selectedTileX === -1) {
+		return;
+	}
+	rSetDrawColor(0, 240, 0, 92);
 	if (losCheckType === CHECK_LOS_NPC_TO_PLAYER) {
-        var npcSize = Number(document.getElementById(HTML_NPCSIZE_ID).value);
-        if (npcSize < 1) {
-            npcSize = 1;
-        }
-        for (var x = Math.max(selectedTileX - 15, 0); x <= Math.min(selectedTileX + npcSize + 14, 63); ++x) {
-            for (var y = Math.max(selectedTileY - 15, 0); y <= Math.min(selectedTileY + npcSize + 14, 63); ++y) {
-                var destX;
-                var destY;
-                if (x < selectedTileX) {
-                    destX = selectedTileX;
-                } else if (x >= selectedTileX + npcSize) {
-                    destX = selectedTileX + npcSize - 1;
-                } else {
-                    destX = x;
-                }
-                if (y < selectedTileY) {
-                    destY = selectedTileY;
-                } else if (y >= selectedTileY + npcSize) {
-                    destY = selectedTileY + npcSize - 1;
-                } else {
-                    if (destX === x) {
-                        continue;
-                    }
-                    destY = y;
-                }
-                if (hasLineOfSight(x, y, destX, destY) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    rrFill(x, y);
-                }
-            }
-        }
-    } else if (losCheckType === CHECK_LOS_RUNNER) {
-        var xOffset = selectedTileX % 8;
-        var yOffset = selectedTileY % 8;
-        for (var x = Math.max(selectedTileX - 8 - xOffset, 0); x <= Math.min(selectedTileX + 15 - xOffset, 63); ++x) {
-           for (var y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
-                if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    rrFill(x, y);
-                }
-            }
-        }
-    } else {
-        var range = Number(document.getElementById(HTML_PLAYERRANGE_ID).value);
-        for (var x = Math.max(selectedTileX - range, 0); x <= Math.min(selectedTileX + range, 63); ++x) {
-           for (var y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
-                if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
-                    rrFill(x, y);
-                }
-            }
-        }
-    }
-    rSetDrawColor(0, 255, 255, 255);
-    rrFill(selectedTileX, selectedTileY);
-    if (losCheckType === CHECK_LOS_NPC_TO_PLAYER && npcSize > 1) {
-        rrOutlineBig(selectedTileX, selectedTileY, npcSize, npcSize);
-    }
+		var npcSize = Number(document.getElementById(HTML_NPCSIZE_ID).value);
+		if (npcSize < 1) {
+			npcSize = 1;
+		}
+		for (var x = Math.max(selectedTileX - 15, 0); x <= Math.min(selectedTileX + npcSize + 14, 63); ++x) {
+			for (var y = Math.max(selectedTileY - 15, 0); y <= Math.min(selectedTileY + npcSize + 14, 63); ++y) {
+				var destX;
+				var destY;
+				if (x < selectedTileX) {
+					destX = selectedTileX;
+				} else if (x >= selectedTileX + npcSize) {
+					destX = selectedTileX + npcSize - 1;
+				} else {
+					destX = x;
+				}
+				if (y < selectedTileY) {
+					destY = selectedTileY;
+				} else if (y >= selectedTileY + npcSize) {
+					destY = selectedTileY + npcSize - 1;
+				} else {
+					if (destX === x) {
+						continue;
+					}
+					destY = y;
+				}
+				if (hasLineOfSight(x, y, destX, destY) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+					rrFill(x, y);
+				}
+			}
+		}
+	} else if (losCheckType === CHECK_LOS_RUNNER) {
+		var xOffset = selectedTileX % 8;
+		var yOffset = selectedTileY % 8;
+		for (var x = Math.max(selectedTileX - 8 - xOffset, 0); x <= Math.min(selectedTileX + 15 - xOffset, 63); ++x) {
+		   for (var y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
+				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+					rrFill(x, y);
+				}
+			}
+		}
+	} else {
+		var range = Number(document.getElementById(HTML_PLAYERRANGE_ID).value);
+		for (var x = Math.max(selectedTileX - range, 0); x <= Math.min(selectedTileX + range, 63); ++x) {
+		   for (var y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
+				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+					rrFill(x, y);
+				}
+			}
+		}
+	}
+	rSetDrawColor(0, 255, 255, 255);
+	rrFill(selectedTileX, selectedTileY);
+	if (losCheckType === CHECK_LOS_NPC_TO_PLAYER && npcSize > 1) {
+		rrOutlineBig(selectedTileX, selectedTileY, npcSize, npcSize);
+	}
 }
 function drawDetails() {
-    if (currentMap !== wave1to9 && currentMap !== wave10) {
-        return;
-    }
-    rSetDrawColor(160, 82, 45, 255);
-    rrCone(40, 40);
-    rrCone(40, 39);
-    rrCone(41, 40);
-    rrCone(41, 39);
-    rrCone(43, 39);
-    
-    rrCone(36, 42);
-    rrCone(36, 43);
-    rrCone(37, 42);
-    rrCone(37, 43);
-    
-    rrCone(39, 44);
-    
-    rrCone(43, 30);
-    rrCone(43, 31);
-    rrCone(44, 30);
-    rrCone(44, 31);
-    
-    rrCone(45, 32);
-    
-    if (currentMap === wave1to9) {
-        rrFillItem(29, 46);
-        rrFillItem(28, 47);
-    } else {
-        rrFillItem(30, 46);
-        rrFillItem(29, 47);
-    }
+	if (currentMap !== wave1to9 && currentMap !== wave10) {
+		return;
+	}
+	rSetDrawColor(160, 82, 45, 255);
+	rrCone(40, 40);
+	rrCone(40, 39);
+	rrCone(41, 40);
+	rrCone(41, 39);
+	rrCone(43, 39);
+	
+	rrCone(36, 42);
+	rrCone(36, 43);
+	rrCone(37, 42);
+	rrCone(37, 43);
+	
+	rrCone(39, 44);
+	
+	rrCone(43, 30);
+	rrCone(43, 31);
+	rrCone(44, 30);
+	rrCone(44, 31);
+	
+	rrCone(45, 32);
+	
+	if (currentMap === wave1to9) {
+		rrFillItem(29, 46);
+		rrFillItem(28, 47);
+	} else {
+		rrFillItem(30, 46);
+		rrFillItem(29, 47);
+	}
 	rSetDrawColor(160, 82, 45, 220);
 	rrOutline(45, 34);
 	rrOutline(15, 33);
 	if (currentMap === wave10) {
 		rrOutlineBig(27, 28, 8, 8);
 	}
-    rSetDrawColor(127, 127, 127, 255);
-    rrFillItem(32, 42);
+	rSetDrawColor(127, 127, 127, 255);
+	rrFillItem(32, 42);
 }
 function drawOverlays() {
-    if (currentMap === inferno) {
-        rSetDrawColor(240, 20, 20, 255);
-        rrOutlineBig(18, 18, 2, 2);
-        rrOutlineBig(18, 18, 3, 3);
-        rrOutlineBig(18, 18, 4, 4);
-        rrOutlineBig(22, 23, 2, 2);
-        rrOutlineBig(22, 23, 3, 3);
-        rrOutlineBig(22, 23, 4, 4);
-        rrOutlineBig(32, 18, 2, 2);
-        rrOutlineBig(32, 18, 3, 3);
-        rrOutlineBig(32, 18, 4, 4);
-        rrOutlineBig(40, 21, 2, 2);
-        rrOutlineBig(40, 21, 3, 3);
-        rrOutlineBig(40, 21, 4, 4);
-        rrOutlineBig(33, 29, 2, 2);
-        rrOutlineBig(33, 29, 3, 3);
-        rrOutlineBig(33, 29, 4, 4);
-        rrOutlineBig(40, 34, 2, 2);
-        rrOutlineBig(40, 34, 3, 3);
-        rrOutlineBig(40, 34, 4, 4);
-        rrOutlineBig(39, 41, 2, 2);
-        rrOutlineBig(39, 41, 3, 3);
-        rrOutlineBig(39, 41, 4, 4);
-        rrOutlineBig(18, 41, 2, 2);
-        rrOutlineBig(18, 41, 3, 3);
-        rrOutlineBig(18, 41, 4, 4);
-        rrOutlineBig(20, 35, 2, 2);
-        rrOutlineBig(20, 35, 3, 3);
-        rrOutlineBig(20, 35, 4, 4);
-        //zuk
-        rrOutlineBig(28, 52, 7, 7);
-        //nibblers
-        rSetDrawColor(0, 0, 255, 255);
-        rrOutlineBig(25, 33, 3, 3);
-        return;
-    } 
-    if (currentMap !== wave1to9 && currentMap !== wave10) {
-        return;
-    }
-    // Spawns and stuff
+	if (currentMap === inferno) {
+		rSetDrawColor(240, 20, 20, 255);
+		rrOutlineBig(18, 18, 2, 2);
+		rrOutlineBig(18, 18, 3, 3);
+		rrOutlineBig(18, 18, 4, 4);
+		rrOutlineBig(22, 23, 2, 2);
+		rrOutlineBig(22, 23, 3, 3);
+		rrOutlineBig(22, 23, 4, 4);
+		rrOutlineBig(32, 18, 2, 2);
+		rrOutlineBig(32, 18, 3, 3);
+		rrOutlineBig(32, 18, 4, 4);
+		rrOutlineBig(40, 21, 2, 2);
+		rrOutlineBig(40, 21, 3, 3);
+		rrOutlineBig(40, 21, 4, 4);
+		rrOutlineBig(33, 29, 2, 2);
+		rrOutlineBig(33, 29, 3, 3);
+		rrOutlineBig(33, 29, 4, 4);
+		rrOutlineBig(40, 34, 2, 2);
+		rrOutlineBig(40, 34, 3, 3);
+		rrOutlineBig(40, 34, 4, 4);
+		rrOutlineBig(39, 41, 2, 2);
+		rrOutlineBig(39, 41, 3, 3);
+		rrOutlineBig(39, 41, 4, 4);
+		rrOutlineBig(18, 41, 2, 2);
+		rrOutlineBig(18, 41, 3, 3);
+		rrOutlineBig(18, 41, 4, 4);
+		rrOutlineBig(20, 35, 2, 2);
+		rrOutlineBig(20, 35, 3, 3);
+		rrOutlineBig(20, 35, 4, 4);
+		//zuk
+		rrOutlineBig(28, 52, 7, 7);
+		//nibblers
+		rSetDrawColor(0, 0, 255, 255);
+		rrOutlineBig(25, 33, 3, 3);
+		return;
+	} 
+	if (currentMap !== wave1to9 && currentMap !== wave10) {
+		return;
+	}
+	// Spawns and stuff
 	rSetDrawColor(240, 10, 10, 220);
 	if (currentMap === wave1to9) {
 		rrOutline(18, 45);
@@ -278,148 +278,148 @@ function drawOverlays() {
 	rrFill(36, 14);
 }
 function drawGrid() {
-    for (var xTile = 0; xTile < 64; ++xTile) {
-        if (xTile % 8 == 7) {
-            rSetDrawColor(0, 0, 0, 72);
-        } else {
-            rSetDrawColor(0, 0, 0, 48);
-        }
+	for (var xTile = 0; xTile < 64; ++xTile) {
+		if (xTile % 8 == 7) {
+			rSetDrawColor(0, 0, 0, 72);
+		} else {
+			rSetDrawColor(0, 0, 0, 48);
+		}
 		rrEastLineBig(xTile, 0, 64);
-    }
-    for (var yTile = 0; yTile < 64; ++yTile) {
-        if (yTile % 8 == 7) {
-            rSetDrawColor(0, 0, 0, 72);
-        } else {
-            rSetDrawColor(0, 0, 0, 48);
-        }
+	}
+	for (var yTile = 0; yTile < 64; ++yTile) {
+		if (yTile % 8 == 7) {
+			rSetDrawColor(0, 0, 0, 72);
+		} else {
+			rSetDrawColor(0, 0, 0, 48);
+		}
 		rrNorthLineBig(0, yTile, 64);
-    }
+	}
 }
 function drawMap() {
-    rSetDrawColor(206, 183, 117, 255);
-    rClear();
-    for (let y = 0; y < 64; ++y) {	
-        for (let x = 0; x < 64; ++x) {
+	rSetDrawColor(206, 183, 117, 255);
+	rClear();
+	for (let y = 0; y < 64; ++y) {	
+		for (let x = 0; x < 64; ++x) {
 			let tileFlag = getTileFlag(x, y);
-            if ((tileFlag & LOS_FULL_MASK) !== 0) {
-                rSetDrawColor(0, 0, 0, 255);
-                rrFillOpaque(x, y);
-            } else  {
-                if ((tileFlag & MOVE_FULL_MASK) !== 0) {
-                    rSetDrawColor(127, 127, 127, 255);
-                    rrFillOpaque(x, y);
-                }
-                if ((tileFlag & LOS_EAST_MASK) !== 0) {
-                    rSetDrawColor(0, 0, 0, 255);
-                    rrEastLine(x, y);
-                } else if ((tileFlag & MOVE_EAST_MASK) !== 0) {
-                    rSetDrawColor(127, 127, 127, 255);
-                    rrEastLine(x, y);
-                }
-                if ((tileFlag & LOS_WEST_MASK) !== 0) {
-                    rSetDrawColor(0, 0, 0, 255);
-                    rrWestLine(x, y);
-                } else if ((tileFlag & MOVE_WEST_MASK) !== 0) {
-                    rSetDrawColor(127, 127, 127, 255);
-                    rrWestLine(x, y);
-                }
-                if ((tileFlag & LOS_NORTH_MASK) !== 0) {
-                    rSetDrawColor(0, 0, 0, 255);
-                    rrNorthLine(x, y);
-                } else if ((tileFlag & MOVE_NORTH_MASK) !== 0) {
-                    rSetDrawColor(127, 127, 127, 255);
-                    rrNorthLine(x, y);
-                }
-                if ((tileFlag & LOS_SOUTH_MASK) !== 0) {
-                    rSetDrawColor(0, 0, 0, 255);
-                    rrSouthLine(x, y);
-                } else if ((tileFlag & MOVE_SOUTH_MASK) !== 0) {
-                    rSetDrawColor(127, 127, 127, 255);
-                    rrSouthLine(x, y);
-                }
-            }
-        }
-    }
+			if ((tileFlag & LOS_FULL_MASK) !== 0) {
+				rSetDrawColor(0, 0, 0, 255);
+				rrFillOpaque(x, y);
+			} else  {
+				if ((tileFlag & MOVE_FULL_MASK) !== 0) {
+					rSetDrawColor(127, 127, 127, 255);
+					rrFillOpaque(x, y);
+				}
+				if ((tileFlag & LOS_EAST_MASK) !== 0) {
+					rSetDrawColor(0, 0, 0, 255);
+					rrEastLine(x, y);
+				} else if ((tileFlag & MOVE_EAST_MASK) !== 0) {
+					rSetDrawColor(127, 127, 127, 255);
+					rrEastLine(x, y);
+				}
+				if ((tileFlag & LOS_WEST_MASK) !== 0) {
+					rSetDrawColor(0, 0, 0, 255);
+					rrWestLine(x, y);
+				} else if ((tileFlag & MOVE_WEST_MASK) !== 0) {
+					rSetDrawColor(127, 127, 127, 255);
+					rrWestLine(x, y);
+				}
+				if ((tileFlag & LOS_NORTH_MASK) !== 0) {
+					rSetDrawColor(0, 0, 0, 255);
+					rrNorthLine(x, y);
+				} else if ((tileFlag & MOVE_NORTH_MASK) !== 0) {
+					rSetDrawColor(127, 127, 127, 255);
+					rrNorthLine(x, y);
+				}
+				if ((tileFlag & LOS_SOUTH_MASK) !== 0) {
+					rSetDrawColor(0, 0, 0, 255);
+					rrSouthLine(x, y);
+				} else if ((tileFlag & MOVE_SOUTH_MASK) !== 0) {
+					rSetDrawColor(127, 127, 127, 255);
+					rrSouthLine(x, y);
+				}
+			}
+		}
+	}
 }
 function hasLineOfSight(x1, y1, x2, y2) {
-    var dx = x2 - x1;
-    var dxAbs = Math.abs(dx);
-    var dy = y2 - y1;
-    var dyAbs = Math.abs(dy);
-    
-    if (dxAbs > dyAbs) {
-        var xTile = x1;
-        var y = y1 << 16;
-        var slope = Math.trunc((dy << 16) / dxAbs); // Integer division
-        
-        var xInc;
-        var xMask;
-        if (dx > 0) {
-            xInc = 1;
-            xMask = LOS_WEST_MASK | LOS_FULL_MASK;
-        } else {
-            xInc = -1;
-            xMask = LOS_EAST_MASK | LOS_FULL_MASK;
-        }
-        var yMask;
-        y += 0x8000;
-        if (dy < 0) {
-            y -= 1; // For correct rounding
-            yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
-        } else {
-            yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
-        }
-        
-        while (xTile !== x2) {
-            xTile += xInc;
-            var yTile = y >>> 16;
-            if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
-                return false;
-            }
-            y += slope;
-            var newYTile = y >>> 16;
-            if (newYTile !== yTile && (getTileFlag(xTile, newYTile) & yMask) !== 0) {
-                return false;
-            }
-        }
-    } else {
-        var yTile = y1;
-        var x = x1 << 16;
-        var slope = Math.trunc((dx << 16) / dyAbs); // Integer division
-        
-        var yInc;
-        var yMask;
-        if (dy > 0) {
-            yInc = 1;
-            yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
-        } else {
-            yInc = -1;
-            yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
-        }
-        
-        var xMask;
-        x += 0x8000;
-        if (dx < 0) {
-            x -= 1; // For correct rounding
-            xMask = LOS_EAST_MASK | LOS_FULL_MASK;
-        } else {
-            xMask = LOS_WEST_MASK | LOS_FULL_MASK;
-        }
-        
-        while (yTile !== y2) {
-            yTile += yInc;
-            var xTile = x >>> 16;
-            if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
-                return false;
-            }
-            x += slope;
-            var newXTile = x >>> 16;
-            if (newXTile !== xTile && (getTileFlag(newXTile, yTile) & xMask) !== 0) {
-                return false;
-            }
-        }
-    }
-    return true;
+	var dx = x2 - x1;
+	var dxAbs = Math.abs(dx);
+	var dy = y2 - y1;
+	var dyAbs = Math.abs(dy);
+	
+	if (dxAbs > dyAbs) {
+		var xTile = x1;
+		var y = y1 << 16;
+		var slope = Math.trunc((dy << 16) / dxAbs); // Integer division
+		
+		var xInc;
+		var xMask;
+		if (dx > 0) {
+			xInc = 1;
+			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+		} else {
+			xInc = -1;
+			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+		}
+		var yMask;
+		y += 0x8000;
+		if (dy < 0) {
+			y -= 1; // For correct rounding
+			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+		} else {
+			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+		}
+		
+		while (xTile !== x2) {
+			xTile += xInc;
+			var yTile = y >>> 16;
+			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+				return false;
+			}
+			y += slope;
+			var newYTile = y >>> 16;
+			if (newYTile !== yTile && (getTileFlag(xTile, newYTile) & yMask) !== 0) {
+				return false;
+			}
+		}
+	} else {
+		var yTile = y1;
+		var x = x1 << 16;
+		var slope = Math.trunc((dx << 16) / dyAbs); // Integer division
+		
+		var yInc;
+		var yMask;
+		if (dy > 0) {
+			yInc = 1;
+			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+		} else {
+			yInc = -1;
+			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+		}
+		
+		var xMask;
+		x += 0x8000;
+		if (dx < 0) {
+			x -= 1; // For correct rounding
+			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+		} else {
+			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+		}
+		
+		while (yTile !== y2) {
+			yTile += yInc;
+			var xTile = x >>> 16;
+			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+				return false;
+			}
+			x += slope;
+			var newXTile = x >>> 16;
+			if (newXTile !== xTile && (getTileFlag(newXTile, yTile) & xMask) !== 0) {
+				return false;
+			}
+		}
+	}
+	return true;
 }
 //{ RsRenderer - rr
 function rrInit(tileSize) {
