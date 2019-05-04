@@ -148,7 +148,7 @@ function drawLOS() {
 		var xOffset = selectedTileX % 8;
 		var yOffset = selectedTileY % 8;
 		for (var x = Math.max(selectedTileX - 8 - xOffset, 0); x <= Math.min(selectedTileX + 15 - xOffset, 63); ++x) {
-		   for (var y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
+			for (var y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
 				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
 					rrFill(x, y);
 				}
@@ -157,7 +157,7 @@ function drawLOS() {
 	} else {
 		var range = Number(document.getElementById(HTML_PLAYERRANGE_ID).value);
 		for (var x = Math.max(selectedTileX - range, 0); x <= Math.min(selectedTileX + range, 63); ++x) {
-		   for (var y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
+			for (var y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
 				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
 					rrFill(x, y);
 				}
