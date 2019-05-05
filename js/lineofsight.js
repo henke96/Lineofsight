@@ -64,6 +64,9 @@ function onNpcSizeChanged() {
 	}
 }
 function setLOSCheckType(type) {
+	if (losCheckType === type) {
+		selectedTileX = -1;
+	}
 	secondSelectedTileX = -1;
 	losCheckType = type;
 	drawAll();
@@ -90,17 +93,17 @@ function onMouseDown(e) {
 	var canvasRect = rCanvas.getBoundingClientRect();
 	newSelectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
 	newSelectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
-	if (newSelectedTileX === selectedTileX && newSelectedTileY === selectedTileY) {
-		selectedTileX = -1;
-		secondSelectedTileX = -1;
-	} else {
-		if (losCheckType === CHECK_LOS_SINGLE && selectedTileX !== -1) {
+	if (losCheckType === CHECK_LOS_SINGLE && selectedTileX !== -1) {
+		if (newSelectedTileX === selectedTileX && newSelectedTileY === selectedTileY) {
+			selectedTileX = -1;
+			secondSelectedTileX = -1;
+		} else {
 			secondSelectedTileX = newSelectedTileX;
 			secondSelectedTileY = newSelectedTileY;
-		} else {
-			selectedTileX = newSelectedTileX;
-			selectedTileY = newSelectedTileY;
 		}
+	} else {
+		selectedTileX = newSelectedTileX;
+		selectedTileY = newSelectedTileY;
 	}
 	drawAll();
 }
