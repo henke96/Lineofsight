@@ -24,14 +24,14 @@ const UNKNOWN_1 = 0x40;
 const CHECK_LOS_RUNNER = 0;
 const CHECK_LOS_PLAYER = 1;
 const CHECK_LOS_NPC_TO_PLAYER = 2;
+const CHECK_LOS_SINGLE = 3;
 
 var currentMap;
 var losCheckType;
 var selectedTileX;
 var selectedTileY;
-
-var prevSelectedTileX;
-var prevSelectedTileY;
+var secondSelectedTileX;
+var secondSelectedTileY;
 
 function start() {
 	let canvas = document.getElementById(HTML_LOSCANVAS_ID)
@@ -40,7 +40,7 @@ function start() {
 	currentMap = wave1to9;
 	losCheckType = CHECK_LOS_PLAYER;
 	selectedTileX = -1;
-	prevSelectedTileX = -1;
+	secondSelectedTileX = -1;
 	rInit(canvas, 64*12, 64*12);
 	rrInit(12);
 	drawAll();
@@ -64,11 +64,8 @@ function onNpcSizeChanged() {
 	}
 }
 function setLOSCheckType(type) {
-	if (losCheckType === type) {
-		selectedTileX = -1;
-	} else {
-		losCheckType = type;
-	}
+	secondSelectedTileX = -1;
+	losCheckType = type;
 	drawAll();
 }
 function increaseSize() {
@@ -91,10 +88,20 @@ function onPlayerRangeChanged() {
 }
 function onMouseDown(e) {
 	var canvasRect = rCanvas.getBoundingClientRect();
-	prevSelectedTileX = selectedTileX;
-	prevSelectedTileY = selectedTileY;
-	selectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
-	selectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
+	newSelectedTileX = Math.trunc((e.clientX - canvasRect.left) / rrTileSize);
+	newSelectedTileY = Math.trunc((canvasRect.bottom - 1 - e.clientY) / rrTileSize);
+	if (newSelectedTileX === selectedTileX && newSelectedTileY === selectedTileY) {
+		selectedTileX = -1;
+		secondSelectedTileX = -1;
+	} else {
+		if (losCheckType === CHECK_LOS_SINGLE && selectedTileX !== -1) {
+			secondSelectedTileX = newSelectedTileX;
+			secondSelectedTileY = newSelectedTileY;
+		} else {
+			selectedTileX = newSelectedTileX;
+			selectedTileY = newSelectedTileY;
+		}
+	}
 	drawAll();
 }
 function getTileFlag(x, y) {
@@ -153,6 +160,52 @@ function drawLOS() {
 					rrFill(x, y);
 				}
 			}
+		}
+	} else if (losCheckType === CHECK_LOS_SINGLE) {
+		if (
+			secondSelectedTileX !== -1 &&
+			(
+				secondSelectedTileX !== selectedTileX ||
+				secondSelectedTileY !== selectedTileY
+			)
+		) {
+			let res = getLOSTiles(selectedTileX, selectedTileY, secondSelectedTileX, secondSelectedTileY);
+			let tiles = res.tiles;
+			for (let i = 0; i < tiles.length; ++i) {
+				let tile = tiles[i];
+				if (tile.fail) {
+					rSetDrawColor(240, 0, 0, 92);
+				} else {
+					rSetDrawColor(0, 240, 0, 92);
+				}
+				rrFill(tile.x, tile.y)
+			}
+
+			rSetDrawColor(0, 255, 255, 255);
+			rrFill(selectedTileX, selectedTileY);
+			
+			let startX = selectedTileX*rrTileSize;
+			let startY = selectedTileY*rrTileSize;
+			let endX = secondSelectedTileX*rrTileSize;
+			let endY = secondSelectedTileY*rrTileSize;
+			if (res.vertical) {
+				if (selectedTileY < secondSelectedTileY) {
+					startY += rrTileSize - 1;
+					endY += rrTileSize - 1;
+				}
+				startX += rrTileSize >>> 1;
+				endX += rrTileSize >>> 1;
+			} else {
+				if (selectedTileX < secondSelectedTileX) {
+					startX += rrTileSize - 1;
+					endX += rrTileSize - 1;
+				}
+				startY += rrTileSize >>> 1;
+				endY += rrTileSize >>> 1;
+			}
+			rSetDrawColor(0, 0, 0, 255);
+			rDrawLine(startX, startY, endX, endY);
+			return;
 		}
 	} else {
 		var range = Number(document.getElementById(HTML_PLAYERRANGE_ID).value);
@@ -349,7 +402,7 @@ function hasLineOfSight(x1, y1, x2, y2) {
 	
 	if (dxAbs > dyAbs) {
 		var xTile = x1;
-		var y = y1 << 16;
+		var y = (y1 << 16) + 0x8000;
 		var slope = Math.trunc((dy << 16) / dxAbs); // Integer division
 		
 		var xInc;
@@ -362,7 +415,6 @@ function hasLineOfSight(x1, y1, x2, y2) {
 			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
 		}
 		var yMask;
-		y += 0x8000;
 		if (dy < 0) {
 			y -= 1; // For correct rounding
 			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
@@ -384,7 +436,7 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		}
 	} else {
 		var yTile = y1;
-		var x = x1 << 16;
+		var x = (x1 << 16) + 0x8000;
 		var slope = Math.trunc((dx << 16) / dyAbs); // Integer division
 		
 		var yInc;
@@ -398,7 +450,6 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		}
 		
 		var xMask;
-		x += 0x8000;
 		if (dx < 0) {
 			x -= 1; // For correct rounding
 			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
@@ -420,6 +471,100 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		}
 	}
 	return true;
+}
+function getLOSTiles(x1, y1, x2, y2) {
+	var dx = x2 - x1;
+	var dxAbs = Math.abs(dx);
+	var dy = y2 - y1;
+	var dyAbs = Math.abs(dy);
+	let hasFailed = false;
+	let tiles = [];
+	let vertical = true;
+	
+	if (dxAbs > dyAbs) {
+		vertical = false;
+		var xTile = x1;
+		var y = (y1 << 16) + 0x8000;
+		var slope = Math.trunc((dy << 16) / dxAbs); // Integer division
+		
+		var xInc;
+		var xMask;
+		if (dx > 0) {
+			xInc = 1;
+			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+		} else {
+			xInc = -1;
+			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+		}
+		var yMask;
+		if (dy < 0) {
+			y -= 1; // For correct rounding
+			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+		} else {
+			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+		}
+		
+		while (xTile !== x2) {
+			xTile += xInc;
+			var yTile = y >>> 16;
+			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+				hasFailed = true;
+			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+			y += slope;
+			var newYTile = y >>> 16;
+			if (newYTile !== yTile) {
+				if ((getTileFlag(xTile, newYTile) & yMask) !== 0) {	
+					hasFailed = true;
+				}
+				tiles.push({ x: xTile, y: newYTile, fail: hasFailed });
+			}
+		}
+	} else {
+		var yTile = y1;
+		var x = (x1 << 16) + 0x8000;
+		var slope = Math.trunc((dx << 16) / dyAbs); // Integer division
+		
+		var yInc;
+		var yMask;
+		if (dy > 0) {
+			yInc = 1;
+			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+		} else {
+			yInc = -1;
+			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+		}
+		
+		var xMask;
+		if (dx < 0) {
+			x -= 1; // For correct rounding
+			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+		} else {
+			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+		}
+		
+		while (yTile !== y2) {
+			yTile += yInc;
+			var xTile = x >>> 16;
+			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+				hasFailed = true;
+			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+			x += slope;
+			var newXTile = x >>> 16;
+			if (newXTile !== xTile) {
+				if ((getTileFlag(newXTile, yTile) & xMask) !== 0) {
+					hasFailed = true;
+				}
+				tiles.push({ x: newXTile, y: yTile, fail: hasFailed });
+			}
+			
+		}
+	}
+	return {
+		vertical: vertical,
+		tiles: tiles
+	}
 }
 //{ RsRenderer - rr
 function rrInit(tileSize) {
@@ -580,6 +725,27 @@ function rDrawCone(x, y, width) { // Not optimised to use i yet
 }
 function rXYToI(x, y) {
 	return rCanvasYFixOffset + x - y*rCanvasWidth;
+}
+function rDrawLine(x1, y1, x2, y2) {
+	var dx = Math.abs(x2 - x1);
+	var dy = Math.abs(y2 - y1);
+	var sx = (x1 < x2) ? 1 : -1;
+	var sy = (y1 < y2) ? 1 : -1;
+	var err = dx - dy;
+
+	while(true) {
+		rDrawPixel(rXYToI(x1, y1));
+		if ((x1 === x2) && (y1 === y2)) break;
+		var e2 = 2*err;
+		if (e2 > -dy) {
+			err -= dy;
+			x1 += sx;
+		}
+		if (e2 < dx) {
+			err += dx;
+			y1 += sy;
+		}
+	}
 }
 var rCanvas;
 var rCanvasWidth;
