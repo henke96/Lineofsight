@@ -31,9 +31,10 @@
 	<input type="number" id="playerrange" min="0" max="64" value="10" oninput="onPlayerRangeChanged()">
 	<br>
 	<label>
-		<input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC with size and range
+		<input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC with size
 	</label>
 	<input type="number" id="npcsize" min="1" max="64" value="1" oninput="onNpcSizeChanged()">
+	and range
 	<input type="number" id="npcrange" min="0" max="64" value="15" oninput="onNPCRangeChanged()">
 	<br>
 	<canvas id="loscanvas"></canvas>
