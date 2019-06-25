@@ -16,6 +16,9 @@
 	<label>
 		<input type="radio" name="map" onclick="setInferno()">Inferno
 	</label>
+		<label>
+		<input type="radio" name="map" onclick="setNoPillar()">No pillar
+	</label>
 	<br>
 	<br>
 	<label>
@@ -28,9 +31,10 @@
 	<input type="number" id="playerrange" min="0" max="64" value="10" oninput="onPlayerRangeChanged()">
 	<br>
 	<label>
-		<input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC with size 
+		<input type="radio" name="lostype" onclick="setLOSCheckType(2)">Check LOS for NPC with size and range
 	</label>
 	<input type="number" id="npcsize" min="1" max="64" value="1" oninput="onNpcSizeChanged()">
+	<input type="number" id="npcrange" min="0" max="64" value="15" oninput="onNPCRangeChanged()">
 	<br>
 	<canvas id="loscanvas"></canvas>
 </body>
