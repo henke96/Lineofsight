@@ -38,6 +38,13 @@ var selectedTileY;
 var secondSelectedTileX;
 var secondSelectedTileY;
 
+var useNewLosAlgorithm = false;
+
+function setUseNewLosAlgorithm(isEnabled) {
+	useNewLosAlgorithm = isEnabled;
+	drawAll();
+}
+
 function start() {
 	let canvas = document.getElementById(HTML_LOSCANVAS_ID)
 	canvas.onmousedown = onMouseDown;
@@ -194,7 +201,14 @@ function drawLOS() {
 				secondSelectedTileY !== selectedTileY
 			)
 		) {
-			let res = getLOSTiles(selectedTileX, selectedTileY, secondSelectedTileX, secondSelectedTileY);
+			let fromX = selectedTileX, fromY = selectedTileY;
+			let toX = secondSelectedTileX, toY = secondSelectedTileY;
+			if (useNewLosAlgorithm && selectedTileX > secondSelectedTileX) {
+				fromX = toX, fromY = toY;
+				toX = selectedTileX, toY = selectedTileY;
+			}
+			
+			let res = getLOSTiles(fromX, fromY, toX, toY);
 			let tiles = res.tiles;
 			for (let i = 0; i < tiles.length; ++i) {
 				let tile = tiles[i];
@@ -209,19 +223,19 @@ function drawLOS() {
 			rSetDrawColor(0, 255, 255, 255);
 			rrFill(selectedTileX, selectedTileY);
 			
-			let startX = selectedTileX*rrTileSize;
-			let startY = selectedTileY*rrTileSize;
-			let endX = secondSelectedTileX*rrTileSize;
-			let endY = secondSelectedTileY*rrTileSize;
+			let startX = fromX*rrTileSize;
+			let startY = fromY*rrTileSize;
+			let endX = toX*rrTileSize;
+			let endY = toY*rrTileSize;
 			if (res.vertical) {
-				if (selectedTileY < secondSelectedTileY) {
+				if (fromY < toY) {
 					startY += rrTileSize - 1;
 					endY += rrTileSize - 1;
 				}
 				startX += rrTileSize >>> 1;
 				endX += rrTileSize >>> 1;
 			} else {
-				if (selectedTileX < secondSelectedTileX) {
+				if (fromX < toX) {
 					startX += rrTileSize - 1;
 					endX += rrTileSize - 1;
 				}
@@ -422,6 +436,16 @@ function drawMap() {
 	}
 }
 function hasLineOfSight(x1, y1, x2, y2) {
+	if (useNewLosAlgorithm) {
+		if (x1 > x2) {
+			let tempX2 = x2, tempY2 = y2;
+			x2 = x1;
+			y2 = y1;
+			x1 = tempX2;
+			y1 = tempY2;
+		}
+	}
+	
 	let dx = x2 - x1;
 	let dxAbs = Math.abs(dx);
 	let dy = y2 - y1;
@@ -507,6 +531,8 @@ function getLOSTiles(x1, y1, x2, y2) {
 	let hasFailed = false;
 	let tiles = [];
 	let vertical = true;
+	
+	tiles.push({ x: x1, y: y1, fail: hasFailed });
 	
 	if (dxAbs > dyAbs) {
 		vertical = false;

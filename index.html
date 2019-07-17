@@ -38,4 +38,8 @@
 	<input type="number" id="npcrange" min="0" max="64" value="15" oninput="onNPCRangeChanged()">
 	<br>
 	<canvas id="loscanvas"></canvas>
+	<br>
+	<label>
+		<input type="checkbox" name="lostype" onclick="setUseNewLosAlgorithm(this.checked)">Use Runetek 5 algorithm (experimental)
+	</label>
 </body>
