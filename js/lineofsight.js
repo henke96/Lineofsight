@@ -480,7 +480,7 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		} else {
 			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
 		}
-		
+
 		while (xTile !== x2) {
 			xTile += xInc;
 			let yTile = y >>> 16;
@@ -515,17 +515,39 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		} else {
 			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
 		}
-		
-		while (yTile !== y2) {
-			yTile += yInc;
-			let xTile = x >>> 16;
-			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
-				return false;
+
+		if (useNewLosAlgorithm && dxAbs == dyAbs) {
+			// Special case for diagonal lines in RuneTek 5
+
+			let xInc = 1; // Always west->east.
+			let xTile = x1;
+			while (yTile !== y2) {
+				if (
+					(
+						(getTileFlag(xTile + xInc, yTile) & xMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile + yInc) & yMask) !== 0
+					) && (
+						(getTileFlag(xTile, yTile + yInc) & yMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile + yInc) & xMask) !== 0
+					)
+				) {
+					return false;
+				}
+				xTile += xInc;
+				yTile += yInc;
 			}
-			x += slope;
-			let newXTile = x >>> 16;
-			if (newXTile !== xTile && (getTileFlag(newXTile, yTile) & xMask) !== 0) {
-				return false;
+		} else {
+			while (yTile !== y2) {
+				yTile += yInc;
+				let xTile = x >>> 16;
+				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+					return false;
+				}
+				x += slope;
+				let newXTile = x >>> 16;
+				if (newXTile !== xTile && (getTileFlag(newXTile, yTile) & xMask) !== 0) {
+					return false;
+				}
 			}
 		}
 	}
