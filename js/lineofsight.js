@@ -236,12 +236,22 @@ function drawLOS() {
 			let endX = toX*rrTileSize;
 			let endY = toY*rrTileSize;
 			if (res.vertical) {
-				if (fromY < toY) {
-					startY += rrTileSize - 1;
-					endY += rrTileSize - 1;
+				if (useNewLosAlgorithm && (toX - fromX == Math.abs(toY - fromY))) {
+					// Diagonal special case for RuneTek 5
+					if (fromY < toY) {
+						startY += rrTileSize - 1;
+						endY += rrTileSize - 1;
+					}
+					startX += rrTileSize - 1;
+					endX += rrTileSize - 1;
+				} else {
+					if (fromY < toY) {
+						startY += rrTileSize - 1;
+						endY += rrTileSize - 1;
+					}
+					startX += rrTileSize >>> 1;
+					endX += rrTileSize >>> 1;
 				}
-				startX += rrTileSize >>> 1;
-				endX += rrTileSize >>> 1;
 			} else {
 				if (fromX < toX) {
 					startX += rrTileSize - 1;
@@ -625,23 +635,45 @@ function getLOSTiles(x1, y1, x2, y2) {
 		} else {
 			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
 		}
-		
-		while (yTile !== y2) {
-			yTile += yInc;
-			let xTile = x >>> 16;
-			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
-				hasFailed = true;
-			}
-			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
-			x += slope;
-			let newXTile = x >>> 16;
-			if (newXTile !== xTile) {
-				if ((getTileFlag(newXTile, yTile) & xMask) !== 0) {
+
+		if (useNewLosAlgorithm && dxAbs == dyAbs) {
+			// Special case for diagonal lines in RuneTek 5
+
+			let xInc = 1; // Always west->east.
+			let xTile = x1;
+			while (yTile !== y2) {
+				if (
+					(
+						(getTileFlag(xTile + xInc, yTile) & xMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile + yInc) & yMask) !== 0
+					) && (
+						(getTileFlag(xTile, yTile + yInc) & yMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile + yInc) & xMask) !== 0
+					)
+				) {
 					hasFailed = true;
 				}
-				tiles.push({ x: newXTile, y: yTile, fail: hasFailed });
+				xTile += xInc;
+				yTile += yInc;
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 			}
-			
+		} else {
+			while (yTile !== y2) {
+				yTile += yInc;
+				let xTile = x >>> 16;
+				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+					hasFailed = true;
+				}
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+				x += slope;
+				let newXTile = x >>> 16;
+				if (newXTile !== xTile) {
+					if ((getTileFlag(newXTile, yTile) & xMask) !== 0) {
+						hasFailed = true;
+					}
+					tiles.push({ x: newXTile, y: yTile, fail: hasFailed });
+				}
+			}
 		}
 	}
 	return {
