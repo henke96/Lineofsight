@@ -14,7 +14,7 @@ const noShieldDiff = [3294,3358,3422,3486,3550,3614];
 var noPillar = null;
 
 
-const LOS_FULL_MASK = 0x20000;
+const LOS_CENTER_MASK = 0x20000;
 const LOS_EAST_MASK = 0x1000;
 const LOS_WEST_MASK = 0x10000;
 const LOS_NORTH_MASK = 0x400;
@@ -186,7 +186,7 @@ function drawLOS() {
 					}
 					destY = y;
 				}
-				if (hasLineOfSight(x, y, destX, destY) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+				if (hasLineOfSight(x, y, destX, destY)) {
 					rrFill(x, y);
 				}
 			}
@@ -196,7 +196,7 @@ function drawLOS() {
 		let yOffset = selectedTileY % 8;
 		for (let x = Math.max(selectedTileX - 8 - xOffset, 0); x <= Math.min(selectedTileX + 15 - xOffset, 63); ++x) {
 			for (let y = Math.max(selectedTileY - 8 - yOffset, 0); y <= Math.min(selectedTileY + 15 - yOffset, 63); ++y) {
-				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+				if (hasLineOfSight(selectedTileX, selectedTileY, x, y)) {
 					rrFill(x, y);
 				}
 			}
@@ -211,12 +211,12 @@ function drawLOS() {
 		) {
 			let fromX = selectedTileX, fromY = selectedTileY;
 			let toX = secondSelectedTileX, toY = secondSelectedTileY;
+
+			let res = getLOSTiles(fromX, fromY, toX, toY);
 			if (useNewLosAlgorithm && selectedTileX > secondSelectedTileX) {
 				fromX = toX, fromY = toY;
 				toX = selectedTileX, toY = selectedTileY;
 			}
-			
-			let res = getLOSTiles(fromX, fromY, toX, toY);
 			let tiles = res.tiles;
 			for (let i = 0; i < tiles.length; ++i) {
 				let tile = tiles[i];
@@ -270,7 +270,7 @@ function drawLOS() {
 
 		for (let x = Math.max(selectedTileX - range, 0); x <= Math.min(selectedTileX + range, 63); ++x) {
 			for (let y = Math.max(selectedTileY - range, 0); y <= Math.min(selectedTileY + range, 63); ++y) {
-				if (hasLineOfSight(selectedTileX, selectedTileY, x, y) && (getTileFlag(x, y) & LOS_FULL_MASK) === 0) {
+				if (hasLineOfSight(selectedTileX, selectedTileY, x, y)) {
 					rrFill(x, y);
 				}
 			}
@@ -413,7 +413,7 @@ function drawMap() {
 	for (let y = 0; y < 64; ++y) {	
 		for (let x = 0; x < 64; ++x) {
 			let tileFlag = getTileFlag(x, y);
-			if ((tileFlag & LOS_FULL_MASK) !== 0) {
+			if ((tileFlag & LOS_CENTER_MASK) !== 0) {
 				rSetDrawColor(0, 0, 0, 255);
 				rrFillOpaque(x, y);
 			} else  {
@@ -453,7 +453,11 @@ function drawMap() {
 		}
 	}
 }
+
 function hasLineOfSight(x1, y1, x2, y2) {
+	if (x1 === x2 && y1 === y2) return true;
+	if ((getTileFlag(x1, y1) & LOS_CENTER_MASK) !== 0) return false;
+
 	if (useNewLosAlgorithm) {
 		if (x1 > x2) {
 			let tempX2 = x2, tempY2 = y2;
@@ -470,7 +474,6 @@ function hasLineOfSight(x1, y1, x2, y2) {
 	let dyAbs = Math.abs(dy);
 	
 	if (dxAbs > dyAbs) {
-		let xTile = x1;
 		let y = (y1 << 16) + 0x8000;
 		let slope = Math.trunc((dy << 16) / dxAbs); // Integer division
 		
@@ -478,33 +481,50 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		let xMask;
 		if (dx > 0) {
 			xInc = 1;
-			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+			xMask = LOS_WEST_MASK;
 		} else {
 			xInc = -1;
-			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+			xMask = LOS_EAST_MASK;
 		}
 		let yMask;
 		if (dy < 0) {
-			y -= 1; // For correct rounding
-			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+			y -= 1; // For correct rounding.
+			yMask = LOS_NORTH_MASK;
 		} else {
-			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_SOUTH_MASK;
 		}
-
-		while (xTile !== x2) {
-			xTile += xInc;
-			let yTile = y >>> 16;
-			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+		let xTile = x1 + xInc;
+		let yTile = y >>> 16;
+		for (; xTile !== x2; xTile += xInc) {
+			if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
 				return false;
 			}
 			y += slope;
 			let newYTile = y >>> 16;
-			if (newYTile !== yTile && (getTileFlag(xTile, newYTile) & yMask) !== 0) {
+			if (newYTile !== yTile) {
+				yTile = newYTile;
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
+					return false;
+				}
+			}
+		}
+		// Last tile doesn't check center los.
+		y += slope;
+		let newYTile = y >>> 16;
+		if (newYTile !== yTile) {
+			if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
+				return false;
+			}
+			yTile = newYTile;
+			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+				return false;
+			}
+		} else {
+			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
 				return false;
 			}
 		}
 	} else {
-		let yTile = y1;
 		let x = (x1 << 16) + 0x8000;
 		let slope = Math.trunc((dx << 16) / dyAbs); // Integer division
 		
@@ -512,32 +532,33 @@ function hasLineOfSight(x1, y1, x2, y2) {
 		let yMask;
 		if (dy > 0) {
 			yInc = 1;
-			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_SOUTH_MASK;
 		} else {
 			yInc = -1;
-			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_NORTH_MASK;
 		}
 		
 		let xMask;
 		if (dx < 0) {
-			x -= 1; // For correct rounding
-			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+			x -= 1; // For correct rounding.
+			xMask = LOS_EAST_MASK;
 		} else {
-			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+			xMask = LOS_WEST_MASK;
 		}
-
+		
 		if (useNewLosAlgorithm && dxAbs == dyAbs) {
-			// Special case for diagonal lines in RuneTek 5
+			// Special case for diagonal lines in RuneTek 5.
 
 			let xInc = 1; // Always west->east.
 			let xTile = x1;
-			while (yTile !== y2) {
+			let yTile = y1;
+			while (true) {
 				if (
 					(
-						(getTileFlag(xTile + xInc, yTile) & xMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile) & (xMask | LOS_CENTER_MASK)) !== 0 ||
 						(getTileFlag(xTile + xInc, yTile + yInc) & yMask) !== 0
 					) && (
-						(getTileFlag(xTile, yTile + yInc) & yMask) !== 0 ||
+						(getTileFlag(xTile, yTile + yInc) & (yMask | LOS_CENTER_MASK)) !== 0 ||
 						(getTileFlag(xTile + xInc, yTile + yInc) & xMask) !== 0
 					)
 				) {
@@ -545,17 +566,40 @@ function hasLineOfSight(x1, y1, x2, y2) {
 				}
 				xTile += xInc;
 				yTile += yInc;
+				if (xTile === x2) break;
+				if ((getTileFlag(xTile, yTile) & LOS_CENTER_MASK) !== 0) {
+					return false;
+				}
 			}
 		} else {
-			while (yTile !== y2) {
-				yTile += yInc;
-				let xTile = x >>> 16;
-				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+			let yTile = y1 + yInc;
+			let xTile = x >>> 16;
+			for (; yTile !== y2; yTile += yInc) {
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
 					return false;
 				}
 				x += slope;
 				let newXTile = x >>> 16;
-				if (newXTile !== xTile && (getTileFlag(newXTile, yTile) & xMask) !== 0) {
+				if (newXTile !== xTile) {
+					xTile = newXTile;
+					if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
+						return false;
+					}
+				}
+			}
+			// Last tile doesn't check center los.
+			x += slope;
+			let newXTile = x >>> 16;
+			if (newXTile !== xTile) {
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
+					return false;
+				}
+				xTile = newXTile;
+				if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+					return false;
+				}
+			} else {
+				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
 					return false;
 				}
 			}
@@ -563,20 +607,38 @@ function hasLineOfSight(x1, y1, x2, y2) {
 	}
 	return true;
 }
+
 function getLOSTiles(x1, y1, x2, y2) {
-	let dx = x2 - x1;
-	let dxAbs = Math.abs(dx);
-	let dy = y2 - y1;
-	let dyAbs = Math.abs(dy);
 	let hasFailed = false;
 	let tiles = [];
 	let vertical = true;
 	
+	if (x1 === x2 && y1 === y2) {
+		return {
+			vertical: vertical,
+			tiles: tiles
+		}
+	}
+	if ((getTileFlag(x1, y1) & LOS_CENTER_MASK) !== 0) hasFailed = true;
+
+	if (useNewLosAlgorithm) {
+		if (x1 > x2) {
+			let tempX2 = x2, tempY2 = y2;
+			x2 = x1;
+			y2 = y1;
+			x1 = tempX2;
+			y1 = tempY2;
+		}
+	}
 	tiles.push({ x: x1, y: y1, fail: hasFailed });
+	
+	let dx = x2 - x1;
+	let dxAbs = Math.abs(dx);
+	let dy = y2 - y1;
+	let dyAbs = Math.abs(dy);
 	
 	if (dxAbs > dyAbs) {
 		vertical = false;
-		let xTile = x1;
 		let y = (y1 << 16) + 0x8000;
 		let slope = Math.trunc((dy << 16) / dxAbs); // Integer division
 		
@@ -584,37 +646,55 @@ function getLOSTiles(x1, y1, x2, y2) {
 		let xMask;
 		if (dx > 0) {
 			xInc = 1;
-			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+			xMask = LOS_WEST_MASK;
 		} else {
 			xInc = -1;
-			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+			xMask = LOS_EAST_MASK;
 		}
 		let yMask;
 		if (dy < 0) {
-			y -= 1; // For correct rounding
-			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+			y -= 1; // For correct rounding.
+			yMask = LOS_NORTH_MASK;
 		} else {
-			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_SOUTH_MASK;
 		}
-		
-		while (xTile !== x2) {
-			xTile += xInc;
-			let yTile = y >>> 16;
-			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+		let xTile = x1 + xInc;
+		let yTile = y >>> 16;
+		for (; xTile !== x2; xTile += xInc) {
+			if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
 				hasFailed = true;
 			}
 			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 			y += slope;
 			let newYTile = y >>> 16;
 			if (newYTile !== yTile) {
-				if ((getTileFlag(xTile, newYTile) & yMask) !== 0) {	
+				yTile = newYTile;
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
 					hasFailed = true;
 				}
-				tiles.push({ x: xTile, y: newYTile, fail: hasFailed });
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 			}
 		}
+		// Last tile doesn't check center los.
+		y += slope;
+		let newYTile = y >>> 16;
+		if (newYTile !== yTile) {
+			if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
+				hasFailed = true;
+			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+			yTile = newYTile;
+			if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+				hasFailed = true;
+			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+		} else {
+			if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+				hasFailed = true;
+			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+		}
 	} else {
-		let yTile = y1;
 		let x = (x1 << 16) + 0x8000;
 		let slope = Math.trunc((dx << 16) / dyAbs); // Integer division
 		
@@ -622,32 +702,33 @@ function getLOSTiles(x1, y1, x2, y2) {
 		let yMask;
 		if (dy > 0) {
 			yInc = 1;
-			yMask = LOS_SOUTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_SOUTH_MASK;
 		} else {
 			yInc = -1;
-			yMask = LOS_NORTH_MASK | LOS_FULL_MASK;
+			yMask = LOS_NORTH_MASK;
 		}
 		
 		let xMask;
 		if (dx < 0) {
-			x -= 1; // For correct rounding
-			xMask = LOS_EAST_MASK | LOS_FULL_MASK;
+			x -= 1; // For correct rounding.
+			xMask = LOS_EAST_MASK;
 		} else {
-			xMask = LOS_WEST_MASK | LOS_FULL_MASK;
+			xMask = LOS_WEST_MASK;
 		}
-
+		
 		if (useNewLosAlgorithm && dxAbs == dyAbs) {
-			// Special case for diagonal lines in RuneTek 5
+			// Special case for diagonal lines in RuneTek 5.
 
 			let xInc = 1; // Always west->east.
 			let xTile = x1;
-			while (yTile !== y2) {
+			let yTile = y1;
+			while (true) {
 				if (
 					(
-						(getTileFlag(xTile + xInc, yTile) & xMask) !== 0 ||
+						(getTileFlag(xTile + xInc, yTile) & (xMask | LOS_CENTER_MASK)) !== 0 ||
 						(getTileFlag(xTile + xInc, yTile + yInc) & yMask) !== 0
 					) && (
-						(getTileFlag(xTile, yTile + yInc) & yMask) !== 0 ||
+						(getTileFlag(xTile, yTile + yInc) & (yMask | LOS_CENTER_MASK)) !== 0 ||
 						(getTileFlag(xTile + xInc, yTile + yInc) & xMask) !== 0
 					)
 				) {
@@ -655,24 +736,49 @@ function getLOSTiles(x1, y1, x2, y2) {
 				}
 				xTile += xInc;
 				yTile += yInc;
+				if (xTile === x2) break;
+				if ((getTileFlag(xTile, yTile) & LOS_CENTER_MASK) !== 0) {
+					hasFailed = true;
+				}
 				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 			}
+			tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 		} else {
-			while (yTile !== y2) {
-				yTile += yInc;
-				let xTile = x >>> 16;
-				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+			let yTile = y1 + yInc;
+			let xTile = x >>> 16;
+			for (; yTile !== y2; yTile += yInc) {
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
 					hasFailed = true;
 				}
 				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 				x += slope;
 				let newXTile = x >>> 16;
 				if (newXTile !== xTile) {
-					if ((getTileFlag(newXTile, yTile) & xMask) !== 0) {
+					xTile = newXTile;
+					if ((getTileFlag(xTile, yTile) & (xMask | LOS_CENTER_MASK)) !== 0) {
 						hasFailed = true;
 					}
-					tiles.push({ x: newXTile, y: yTile, fail: hasFailed });
+					tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 				}
+			}
+			// Last tile doesn't check center los.
+			x += slope;
+			let newXTile = x >>> 16;
+			if (newXTile !== xTile) {
+				if ((getTileFlag(xTile, yTile) & (yMask | LOS_CENTER_MASK)) !== 0) {
+					hasFailed = true;
+				}
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+				xTile = newXTile;
+				if ((getTileFlag(xTile, yTile) & xMask) !== 0) {
+					hasFailed = true;
+				}
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
+			} else {
+				if ((getTileFlag(xTile, yTile) & yMask) !== 0) {
+					hasFailed = true;
+				}
+				tiles.push({ x: xTile, y: yTile, fail: hasFailed });
 			}
 		}
 	}
