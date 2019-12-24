@@ -368,6 +368,39 @@ function drawOverlays() {
 		rrOutlineBig(25, 33, 3, 3);
 		return;
 	}
+	if (currentMap == fightCaves) {
+		rSetDrawColor(240, 20, 20, 255);
+		rrOutline(10, 50);
+		rrOutlineBig(10, 50, 2, 2);
+		rrOutlineBig(10, 50, 3, 3);
+		rrOutlineBig(10, 50, 4, 4);
+		rrOutlineBig(10, 50, 5, 5);
+
+		rrOutline(30, 30);
+		rrOutlineBig(30, 30, 2, 2);
+		rrOutlineBig(30, 30, 3, 3);
+		rrOutlineBig(30, 30, 4, 4);
+		rrOutlineBig(30, 30, 5, 5);
+
+		rrOutline(10, 15);
+		rrOutlineBig(10, 15, 2, 2);
+		rrOutlineBig(10, 15, 3, 3);
+		rrOutlineBig(10, 15, 4, 4);
+		rrOutlineBig(10, 15, 5, 5);
+
+		rrOutline(35, 15);
+		rrOutlineBig(35, 15, 2, 2);
+		rrOutlineBig(35, 15, 3, 3);
+		rrOutlineBig(35, 15, 4, 4);
+		rrOutlineBig(35, 15, 5, 5);
+
+		rrOutline(50, 26);
+		rrOutlineBig(50, 26, 2, 2);
+		rrOutlineBig(50, 26, 3, 3);
+		rrOutlineBig(50, 26, 4, 4);
+		rrOutlineBig(50, 26, 5, 5);
+		return;
+	}
 	if (currentMap !== wave1to9 && currentMap !== wave10) {
 		return;
 	}
